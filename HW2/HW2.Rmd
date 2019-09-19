@@ -1,0 +1,118 @@
+---
+title: "Homework 2"
+author: "Gabriel Lahman"
+date: "1/24/2019"
+output: 
+  html_document:
+    theme: spacelab
+    highlight: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+## Task 1
+
+```{r}
+
+getParams = function(theta) {
+  params = list(
+    mu = theta[1],
+    sigma = exp(theta[2])
+  )
+  
+  return (params)
+}
+
+getTheta = function(params) {
+  theta = rep(0,2)
+  theta[1] = params$mu
+  theta[2] = log(params$sigma)
+  
+  return (theta)
+}
+```
+
+
+## Task 2
+
+```{r}
+
+logLikeParams = function(params, y) {
+  n = length(y)
+  s2 = (params$sigma)^ 2
+  mu = params$mu
+  logLike = (-n/2)*log(2*pi) -(n/2)*log(s2) - (1/(2*s2))*(sum((y-mu)^2))
+  
+  return (logLike)
+}
+
+
+logLikeTheta = function(theta, y) {
+  params = getParams(theta)
+  
+  return (logLikeParams(params, y))
+}
+```
+
+
+## Task 3
+
+```{r}
+
+MLE_norm = function(y, par_0, tol, maxit=10000) {
+  par = getTheta(par_0)
+  fn = logLikeTheta
+  control = list(
+    reltol=tol,
+    fnscale=-1,
+    maxit=maxit
+  )
+  opt = optim(
+    par=par,
+    fn=fn,
+    y=y,
+    control=control
+  )
+  
+  MLE = list(
+    mu = opt$par[1],
+    sigma = opt$par[2]
+  )
+  
+  log_lik = opt$value
+  
+  est = list(
+    MLE=MLE,
+    log_lik=log_lik
+  )
+  
+  return (est)
+  
+}
+
+```
+
+
+## Task 4
+
+```{r}
+y = c(1,3,5,7,9)
+par_0 = list(mu=5, 
+             sigma=2.828
+             )
+est = MLE_norm(y,
+               par_0,
+               .01
+               )
+```
+
+```{r echo=FALSE}
+print("MLE Estimation for muHat = 5 and sigmaHat = 2.828")
+print(paste0("Mu= ", est$MLE$mu, " Sigma= ", round(est$MLE$sigma, 5), " Log-Likelihood= ", round(est$log_lik, 5)))
+
+```
+
+

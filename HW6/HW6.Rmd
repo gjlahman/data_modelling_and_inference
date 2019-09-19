@@ -1,0 +1,119 @@
+---
+title: "Homework 6"
+author: "Gabriel Lahman"
+date: "3/1/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+data("faithful")
+```
+## Question 1
+
+```{r}
+FIT_glm = function(data, train_ind, form, outcome_name) {
+  n = dim(data)[1]
+  data_train = subset(data, c(1:n)%in%train_ind)
+  model = glm(formula = form,
+              data = data_train,
+              family = Gamma(link = "log"))
+  return (model)
+}
+
+CVM_glm = function(fit, data, train_ind, form, outcome_name) {
+  n = dim(data)[1]
+  data_test = subset(data, !(c(1:n)%in%train_ind))
+  pred = predict(fit,
+                 newdata=data_test,
+                 type = "response")
+  actual = data_test[,outcome_name]
+  mean_abs_error = mean(abs(pred - actual))
+  return (mean_abs_error)
+}
+```
+
+## Question 2
+
+```{r}
+SPLIT_Kfold = function(n, K) {
+  ind = c(1:n)
+  out = list()
+  for (i in 1:(K - 1)) {
+    size = length(ind)* 1/(K - i + 1)
+    split = sort(sample(ind, size))
+    ind = ind[ !( ind %in% split) ]
+    out[[i]] = split
+  }
+  out[[K]] = ind
+  return(out)
+}
+
+CV_Kfold = function(data,K_SPLIT,FIT,CVM,...){
+  n = dim(data)[1]
+  if(class(K_SPLIT)=="list"){
+    split_ind = K_SPLIT
+    K = length(K_SPLIT)
+  }else{
+    split_ind = SPLIT_Kfold(n,K_SPLIT)
+    K = K_SPLIT
+  }
+  cvm = rep(NA,K)
+  ind = c(1:n)
+  for(i in 1:K){
+    train_ind = ind[ -split_ind[[i]] ]
+    fit = FIT(data=data,train_ind=train_ind,...)
+    cvm[i] = CVM(fit=fit,data=data,train_ind=train_ind,...)
+  }
+  return(list(cvm = cvm, avg_cvm = mean(cvm), split_ind = split_ind))
+}
+
+outcome_name = "eruptions"
+form_1 = eruptions ~ waiting
+form_5 = eruptions ~ poly(waiting,5)
+K_SPLIT = dim(faithful)[1]
+cv_poly_1 = CV_Kfold(faithful, K_SPLIT = K_SPLIT, FIT_glm, CVM_glm, form = form_1, outcome_name = outcome_name)  
+cv_poly_5 = CV_Kfold(faithful, K_SPLIT = cv_poly_1$split_ind, FIT_glm, CVM_glm, form=form_5,
+                     outcome_name=outcome_name)
+```
+```{r echo=FALSE}
+print(c(cv_poly_1$avg_cvm,cv_poly_5$avg_cvm))
+```
+
+## Question 3
+
+```{r}
+max_D = 15
+K_SPLIT = SPLIT_Kfold(dim(faithful)[1], 10)
+avg_cvm = rep(0, max_D)
+for (d in 1:max_D) {
+  form = eruptions ~ poly(waiting,d)
+  cv = CV_Kfold(faithful, K_SPLIT, FIT_glm, CVM_glm, form=form, outcome_name=outcome_name)
+  avg_cvm[d] = cv$avg_cvm
+}
+```
+```{r echo=FALSE}
+print(avg_cvm)
+print(paste("Best Model =", which(avg_cvm==min(avg_cvm))))
+```
+
+
+
+```{r}
+K_SPLIT = SPLIT_Kfold(dim(faithful)[1], 10)
+avg_cvm = rep(0, max_D)
+for (d in 1:max_D) {
+  form = eruptions ~ poly(waiting,d)
+  cv = CV_Kfold(faithful, K_SPLIT, FIT_glm, CVM_glm, form=form, outcome_name=outcome_name)
+  avg_cvm[d] = cv$avg_cvm
+}
+```
+```{r echo=FALSE}
+print(avg_cvm)
+print(paste("Best Model =", which(avg_cvm==min(avg_cvm))))
+```
+
+Yes, the model which uses an 8th degree polynomial was the best model regardless of split.

@@ -1,0 +1,322 @@
+---
+title: "Homework 3"
+author: "Gabriel Lahman"
+date: "2/4/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r echo=FALSE}
+
+MLE_fun_exp = function(y,par_0=1,tol=1e-15,maxit=1e5,hess=FALSE){
+  #par_0 is expectation
+  par_trans_theta_exp = function(par){theta = log(par); return(theta)}
+  theta_trans_par_exp = function(theta){par = exp(theta); return(par)}
+  ll_par_exp = function(par,y){
+    sum(dexp(y,1/par,log=TRUE))  
+  }
+  ll_theta_exp = function(theta,y){
+    par = theta_trans_par_exp(theta)
+    ll = ll_par_exp(par,y)
+    return(ll)
+  }
+  theta_0 = par_trans_theta_exp(par_0)
+  fn_theta = ll_theta_exp
+  method="BFGS"
+  control = list(fnscale= -1, maxit=maxit, reltol=tol)
+  opt = optim(par=theta_0,fn=fn_theta,y=y,method=method,control=control)
+  method="Brent"
+  lower = opt$par-10
+  upper = opt$par+10
+  opt = optim(par=opt$par,fn=fn_theta,y=y,method=method,control=control,lower=lower,upper=upper)
+  MLE = theta_trans_par_exp(opt$par)
+  log_lik = opt$value
+  if(!hess){
+    return(list(MLE=MLE, log_lik=log_lik))
+  }else{
+    fn_par = ll_par_exp
+    hess = optimHess(MLE,fn=fn_par,y=y,control=control)
+    fisher_info = -hess
+    cov = solve(fisher_info)
+    return(list(MLE=MLE, log_lik=log_lik, fisher_info = fisher_info, covariance = cov))
+  }
+}
+
+pred_dens_exp = function(y_val,mle){
+  pred = dexp(y_val,1/mle$MLE)
+  return(pred)
+}
+
+MLE_fun_gamma = function(y,par_0=c(1,1),tol=1e-15,maxit=1e5,hess=FALSE){
+  #par_0 shape and expectation
+  par_trans_theta_gamma = function(par){theta = log(par); return(theta)}
+  theta_trans_par_gamma = function(theta){par = exp(theta); return(par)}
+  ll_par_gamma = function(par,y){
+    sum(dgamma(y,shape=par[1],rate=par[1]/par[2],log=TRUE))  
+  }
+  ll_theta_gamma = function(theta,y){
+    par = theta_trans_par_gamma(theta)
+    ll = ll_par_gamma(par,y)
+    return(ll)
+  }
+  theta_0 = par_trans_theta_gamma(par_0)
+  fn_theta = ll_theta_gamma
+  method="Nelder-Mead"
+  control = list(fnscale= -1, maxit=maxit, reltol=tol)
+  opt = optim(par=theta_0,fn=fn_theta,y=y,method=method,control=control)
+  MLE = theta_trans_par_gamma(opt$par)
+  log_lik = opt$value
+  if(!hess){
+    return(list(MLE=MLE, log_lik=log_lik))
+  }else{
+    fn_par = ll_par_gamma
+    hess = optimHess(MLE,fn=fn_par,y=y,control=control)
+    fisher_info = -hess
+    cov = solve(fisher_info)
+    return(list(MLE=MLE, log_lik=log_lik, fisher_info = fisher_info, covariance = cov))
+  }
+}
+
+pred_dens_gamma = function(y_val,mle){
+  pred = dgamma(y_val,mle$MLE[1],mle$MLE[1]/mle$MLE[2])
+  return(pred)
+}
+
+
+MLE_fun_weibull = function(y,par_0=c(1,1),tol=1e-15,maxit=1e5,hess=FALSE){
+  #par_0 is power and expectation
+  par_trans_theta_weibull = function(par){theta = log(par); return(theta)}
+  theta_trans_par_weibull = function(theta){par = exp(theta); return(par)}
+  ll_par_weibull = function(par,y){
+    sum(dexp(y^(par[1]),(gamma(1+1/par[1])/(par[2]))^par[1],log=TRUE))+log(par[1])*length(y) + (par[1]-1)*sum(log(y))
+  }
+  ll_theta_weibull = function(theta,y){
+    par = theta_trans_par_weibull(theta)
+    ll = ll_par_weibull(par,y)
+    return(ll)
+  }
+  theta_0 = par_trans_theta_weibull(par_0)
+  fn_theta = ll_theta_weibull
+  method="Nelder-Mead"
+  control = list(fnscale= -1, maxit=maxit, reltol=tol)
+  opt = optim(par=theta_0,fn=fn_theta,y=y,method=method,control=control)
+  MLE = theta_trans_par_weibull(opt$par)
+  log_lik = opt$value
+  if(!hess){
+    return(list(MLE=MLE, log_lik=log_lik))
+  }else{
+    fn_par = ll_par_weibull
+    hess = optimHess(MLE,fn=fn_par,y=y,control=control)
+    fisher_info = -hess
+    cov = solve(fisher_info)
+    return(list(MLE=MLE, log_lik=log_lik, fisher_info = fisher_info, covariance = cov))
+  }
+}
+
+pred_dens_weibull = function(y_val,mle){
+  par=mle$MLE
+  pred = exp(dexp(y_val^(par[1]),(gamma(1+1/par[1])/(par[2]))^par[1],log=TRUE)+log(par[1]) + (par[1]-1)*(log(y_val)))
+  return(pred)
+}
+
+
+MLE_fun_gen_gamma = function(y,par_0=c(1,1,1),tol=1e-15,maxit=1e5, hess=FALSE){
+  #par_0 power and shape and expectation
+  par_trans_theta_gen_gamma = function(par){theta = log(par); return(theta)}
+  theta_trans_par_gen_gamma = function(theta){par = exp(theta); return(par)}
+  ll_par_gen_gamma = function(par,y){
+   sum(dgamma(y^(par[1]),shape=par[2],rate=par[2]/(par[3])^par[1],log=TRUE)) +log(par[1])*length(y)+ (par[1]-1)*sum(log(y))
+  }
+  ll_theta_gen_gamma = function(theta,y){
+    par = theta_trans_par_gen_gamma(theta)
+    ll = ll_par_gen_gamma(par,y)
+    return(ll)
+  }
+  theta_0 = par_trans_theta_gen_gamma(par_0)
+  fn_theta = ll_theta_gen_gamma
+  method="Nelder-Mead"
+  control = list(fnscale= -1, maxit=maxit, reltol=tol)
+  opt = optim(par=theta_0,fn=fn_theta,y=y,method=method,control=control)
+  MLE = theta_trans_par_gen_gamma(opt$par)
+  log_lik = opt$value
+  if(!hess){
+    return(list(MLE=MLE, log_lik=log_lik))
+  }else{
+    fn_par = ll_par_gen_gamma
+    hess = optimHess(MLE,fn=fn_par,y=y,control=control)
+    fisher_info = -hess
+    cov = solve(fisher_info)
+    return(list(MLE=MLE, log_lik=log_lik, fisher_info = fisher_info, covariance = cov))
+  }
+}
+
+pred_dens_gen_gamma = function(y_val,mle){
+  par = mle$MLE
+  pred = exp(dgamma(y_val^(par[1]),
+                    shape=par[2],
+                    rate=par[2]/par[3]^par[1],
+                    log=TRUE) +
+               log(par[1])+
+               (par[1]-1)*log(y_val)
+             )
+  return(pred)
+}
+```
+
+## Question 1
+
+Although the Weibull and gamma distributions do not nest each other, they are both nested by the generalized gamma distribution. Specifically, the Weibull is a generalized gamma with $\alpha = 1$ and the gamma is a generalized gamma with $k = 1$. Although we cannot directly compare the gamma and the Weibull, we can compare how well the restricted models compare to the generalized gamma. More specifically, we first compute the likelihood ratio statistic of the gamma versus the generalized gamma. Using the maximum likelihood estimators of $\alpha$ and $\theta$ from the fitted gamma model, the maximum estimator of the $k$ for the generalized gamma with the set $\alpha$ and $\theta$ would be found, then the likelihood ratio statistic would be computed (Denoted as $lr_{gamma}$). Second, the likelihood ratio statistic for generalized gamma versus the Weibull would be found by using the maximum likelihood estimators of $k$ and $\theta$ from the fitted Weibull model as set parameters in the generalized gamma, then finding the maximum likelihood estimator for $\alpha$ in the generalized gamma and computing the likelihood ratio statistic of the Weibull versus generalized gamma (Denoted as $lr_{Weibull}$). The model which better fit the data would be the model that best matched the generalized gamma using the fixed parameters, or more specifically, $min(lr_{gamma}, lr_{Weibull})$. 
+
+## Question 2
+
+```{r}
+
+data("faithful")
+y = faithful$eruptions[faithful$waiting > 71]
+
+MLE_exp = MLE_fun_exp(y)
+MLE_gamma = MLE_fun_gamma(y)
+MLE_weibull = MLE_fun_weibull(y)
+MLE_gen_gamma = MLE_fun_gen_gamma(y)
+```
+```{r echo=FALSE}
+print(paste("Log Likelihoods: Exp=", round(MLE_exp$log_lik,2), "Gamma=", round(MLE_gamma$log_lik,2), "Weibull=", round(MLE_weibull$log_lik,2), "Gen. Gamma=", round(MLE_gen_gamma$log_lik,2)))
+```
+
+Using the log likelihoods for each distribution, it appears as the generalized gamma with the maximized parameters best fits the data, since its log likelihood is the highest. The Weibull also appears to be marginally less fitting than the generalized gamma.
+
+```{r}
+y_density = density(y, from = 0)
+exp_density = pred_dens_exp(y_density$x, MLE_exp)
+gamma_density = pred_dens_gamma(y_density$x, MLE_gamma)
+weibull_density = pred_dens_weibull(y_density$x, MLE_weibull)
+gen_gamma_density = pred_dens_gen_gamma(y_density$x, MLE_gen_gamma)
+plot(x = y_density$x,
+     y = weibull_density,
+     type = "l",
+     col = "red",
+     lwd = 1.5,
+     xlab = "Eruption Time (mins)",
+     ylab = "Density",
+     main = "Faithful Model Predicted Densities vs. Data Kernel Density")
+lines(x = y_density$x,
+     y = exp_density,
+     col = "blue",
+     lwd = 1.5)
+lines(x = y_density$x,
+      y = gamma_density,
+      col = "green",
+      lwd = 1.5)
+lines(x = y_density$x,
+      y = gen_gamma_density,
+      col = "orange",
+      lwd = 1.5)
+lines(x = y_density$x,
+      y = y_density$y,
+      lwd = 1.5)
+legend("topleft", 
+       c("Exponential", "Gamma", "Weibull", "Gen. Gamma", "Data Kernel Density"),
+       fill = c("blue", "green", "red", "orange", "black"))
+
+```
+
+```{r}
+
+lr_exp_gamma = -2*(MLE_exp$log_lik - MLE_gamma$log_lik)
+lr_exp_weibull = -2*(MLE_exp$log_lik - MLE_weibull$log_lik)
+lr_gamma_gen_gamma = -2*(MLE_gamma$log_lik - MLE_gen_gamma$log_lik)
+lr_weibull_gen_gamma = -2*(MLE_weibull$log_lik - MLE_gen_gamma$log_lik)
+
+p_exp_gamma = 1 - pchisq(lr_exp_gamma, 1)
+p_exp_weibull = 1 - pchisq(lr_exp_weibull, 1)
+p_gamma_gen_gamma = 1 - pchisq(lr_gamma_gen_gamma, 1)
+p_weibull_gen_gamma = 1 - pchisq(lr_weibull_gen_gamma, 1)
+```
+```{r echo=FALSE}
+print("LR Statistic, P-Value")
+print(paste("Exp/Gamma:",round(lr_exp_gamma,2), ",", p_exp_gamma))
+print(paste("Exp/Weibull:",round(lr_exp_weibull,2), ",", p_exp_weibull))
+print(paste("Gamma/Gen.Gamma:", round(lr_gamma_gen_gamma,2), ",", round(p_gamma_gen_gamma, 3)))
+print(paste("Weibull/Gen.Gamma:", round(lr_weibull_gen_gamma,2), ",", round(p_weibull_gen_gamma, 3)))
+```
+
+Looking at the resulting values for the likelihood ratio statistics and their corresponding p-values (based off of $\chi^{2}_{1}$), the very small p-values for the exponential/gamma comparison and exponential/Weibull comparison show that the more restricted exponential model does not fit the data as well as the models with free $\alpha$ or $k$. Additionally, the gamma/generalized gamma comparison also yields a significant p-value, showing that the model with free $k$ and $\alpha$ fits better than just free $\alpha$. Looking at the graph, the non-significant result for the Weibull/generalized gamma comparison is pretty obvious. Their graphs are incredibly close, which echos the closeness of their log-likelihoods. This may allow us to make an assumption that keeping $k$ unrestricted is allows for much more improvement in model fit than keeping $\alpha$ unrestricted. Visually, both the Weibull and generalized gamma appear to be very close to actual data. Additionally, their log-likelihoods are relatively good. As result of this, I would be comfortable using either the Weibull or generalized gamma to predict new data.
+
+
+## Question 3
+
+```{r}
+data("treering")
+
+y = treering[treering > 0]
+
+MLE_exp = MLE_fun_exp(y)
+MLE_gamma = MLE_fun_gamma(y)
+MLE_weibull = MLE_fun_weibull(y)
+MLE_gen_gamma = MLE_fun_gen_gamma(y)
+```
+```{r echo=FALSE}
+print(paste("Log Likelihoods: Exp=", round(MLE_exp$log_lik,2), "Gamma=", round(MLE_gamma$log_lik,2), "Weibull=", round(MLE_weibull$log_lik,2), "Gen. Gamma=", round(MLE_gen_gamma$log_lik,2)))
+```
+
+From using only the log-likelihood, the generalized gamma appears to best fit the data by a large margin, as it's value is much higher relative to any other distribution.
+
+```{r}
+y_density = density(y, from=0)
+exp_density = pred_dens_exp(y_density$x, MLE_exp)
+gamma_density = pred_dens_gamma(y_density$x, MLE_gamma)
+weibull_density = pred_dens_weibull(y_density$x, MLE_weibull)
+gen_gamma_density = pred_dens_gen_gamma(y_density$x, MLE_gen_gamma)
+
+plot(x = y_density$x,
+     y = y_density$y,
+     type = "l",
+     lwd = 1.5,
+     xlab = "Tree-Ring Widths",
+     ylab = "Density",
+     main = "Treering Model Predicted Densities vs. Data Kernel Density")
+lines(x = y_density$x,
+     y = exp_density,
+     col = "blue",
+     lwd = 1.5)
+lines(x = y_density$x,
+      y = gamma_density,
+      col = "green",
+      lwd = 1.5)
+lines(x = y_density$x,
+      y = gen_gamma_density,
+      col = "orange",
+      lwd = 1.5)
+lines(x = y_density$x,
+      y = weibull_density,
+      col="red",
+      lwd = 1.5)
+legend("topleft", 
+       c("Exponential", "Gamma", "Weibull", "Gen. Gamma", "Data Kernel Density"),
+       fill = c("blue", "green", "red", "orange", "black"))
+
+```
+
+```{r}
+lr_exp_gamma = -2*(MLE_exp$log_lik - MLE_gamma$log_lik)
+lr_exp_weibull = -2*(MLE_exp$log_lik - MLE_weibull$log_lik)
+lr_gamma_gen_gamma = -2*(MLE_gamma$log_lik - MLE_gen_gamma$log_lik)
+lr_weibull_gen_gamma = -2*(MLE_weibull$log_lik - MLE_gen_gamma$log_lik)
+
+p_exp_gamma = 1 - pchisq(lr_exp_gamma, 1)
+p_exp_weibull = 1 - pchisq(lr_exp_weibull, 1)
+p_gamma_gen_gamma = 1 - pchisq(lr_gamma_gen_gamma, 1)
+p_weibull_gen_gamma = 1 - pchisq(lr_weibull_gen_gamma, 1)
+```
+```{r echo=FALSE}
+print("LR Statistic, P-Value")
+print(paste("Exp/Gamma:",round(lr_exp_gamma,2), ",", p_exp_gamma))
+print(paste("Exp/Weibull:",round(lr_exp_weibull,2), ",", p_exp_weibull))
+print(paste("Gamma/Gen.Gamma:", round(lr_gamma_gen_gamma,2), ",", round(p_gamma_gen_gamma, 3)))
+print(paste("Weibull/Gen.Gamma:", round(lr_weibull_gen_gamma,2), ",", round(p_weibull_gen_gamma, 3)))
+```
+
+Looking at the likelihood ratio statistics and their corresponding p-values, it is very obvious that as you move from most-restricted model (exponential) to least restricted (generalized gamma), the addition of free parameters greatly improves model fit. However, it is important to realize that these improvements are relative. Even the generalized gamma, the "best fitting" model, has a very bad log-likelihood and visually does not compare very well to the actual data. Because of this, I would not be comfortable using any of the models to predict new data.

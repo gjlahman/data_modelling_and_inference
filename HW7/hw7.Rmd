@@ -1,0 +1,100 @@
+---
+title: "Homework 7"
+author: "Gabriel Lahman"
+date: "3/6/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Question 1
+
+#### Part 1
+
+$\begin{pmatrix}
+a_{11}z_{1} + a_{12}z_{2} \\
+a_{21}z_{1} + a_{22}z_{2}
+\end{pmatrix}$
+
+#### Part 2
+
+$\begin{pmatrix}
+z_{1} \ast (a_{11}z_{1} + a_{12}z_{2}) + z_{2} \ast (a_{21}z_{1} + a_{22}z_{2})
+\end{pmatrix}$
+
+
+#### Part 3
+
+$\begin{pmatrix}
+(a_{11}\ast a_{11} + a_{12} \ast a_{a21}) & (a_{11} \ast a_{12} + a_{12} \ast a_{22}) \\
+(a_{21}\ast a_{11} + a_{22} \ast a_{a21}) & (a_{21} \ast a_{12} + a_{22} \ast a_{22})
+\end{pmatrix}$
+
+#### Part 4
+
+$det(A) = a_{11} \ast a_{22} - a_{21} \ast a_{12}$
+
+#### Part 5
+
+$trace(A) = a_{11} \ast a_{22}$
+
+#### Part 6
+
+$\begin{pmatrix} a_{11} & a_{21} \\ a_{12} & a_{22} \end{pmatrix}$
+
+#### Part 7
+
+$\begin{pmatrix}
+(a_{11} \ast a_{11} + a_{12} \ast a_{12}) & (a_{11} \ast a_{21} + a_{21} \ast a_{22}) \\
+(a_{12} \ast a_{11} + a_{22} \ast a_{12}) & (a_{12} \ast a_{21} + a_{22} \ast a_{22})
+\end{pmatrix}$
+
+#### Part 8
+
+$A^{-1} = \frac{1}{det(A)}A \\$
+
+$x = A^{-1} \begin{pmatrix} 1 \\ 0 \end{pmatrix} = \begin{pmatrix} \frac{a_{11}}{det(A)} + (0)\frac{a_{12}}{det(A)} \\ \frac{a_{21}}{det(A)} + (0)\frac{a_{22}}{det(A)} \end{pmatrix} = \begin{pmatrix} \frac{a_{11}}{det(A)} \\ \frac{a_{21}}{det(A)} \end{pmatrix}$
+
+#### Part 9
+
+$y = A^{-1} \begin{pmatrix} 0 \\ 1 \end{pmatrix} = \begin{pmatrix} (0)\frac{a_{11}}{det(A)} + \frac{a_{12}}{det(A)} \\ (0)\frac{a_{21}}{det(A)} + \frac{a_{22}}{det(A)} \end{pmatrix} = \begin{pmatrix} \frac{a_{12}}{det(A)} \\ \frac{a_{22}}{det(A)} \end{pmatrix}$
+
+#### Part 10
+
+$u = \begin{pmatrix} 1 & 0 \end{pmatrix} A^{-1} = \begin{pmatrix} \frac{a_{11}}{det(A)} + (0)\frac{a_{21}}{det(A)} & \frac{a_{12}}{det(A)} + (0)\frac{a_{22}}{det(A)} \end{pmatrix} = \begin{pmatrix} \frac{a_{11}}{det(A)} & \frac{a_{12}}{det(A)} \end{pmatrix}$
+
+#### Part 11
+
+$y = \begin{pmatrix} 0 & 1 \end{pmatrix} A^{-1} = \begin{pmatrix} (0)\frac{a_{11}}{det(A)} + \frac{a_{21}}{det(A)} & (0)\frac{a_{12}}{det(A)} + \frac{a_{22}}{det(A)} \end{pmatrix} = \begin{pmatrix} \frac{a_{21}}{det(A)} & \frac{a_{22}}{det(A)} \end{pmatrix}$
+
+#### Part 12
+
+$\begin{pmatrix} x & y \end{pmatrix} = \begin{pmatrix} \frac{a_{11}}{det(A)} & \frac{a_{12}}{det(A)} \\ \frac{a_{21}}{det(A)} & \frac{a_{22}}{det(A)} \end{pmatrix} \\$
+
+$\begin{pmatrix} u \\ v \end{pmatrix} = \begin{pmatrix} \frac{a_{11}}{det(A)} & \frac{a_{12}}{det(A)} \\ \frac{a_{21}}{det(A)} & \frac{a_{22}}{det(A)} \end{pmatrix} \\$
+
+Yes, the matrices are the same.
+
+## Question 2
+
+$b^2 < ac$ for $det(A) > 0$.
+
+Precision Matrix = $\frac{1}{ac - b^2}\begin{pmatrix} a & b \\ b & c \end{pmatrix} \\$
+
+Correlation = $\frac{b}{\sqrt{a} \sqrt{c}}$
+
+## Question 3
+
+$E[X|Z] = \mu + \phi Z \\$
+
+
+$E[X] = E[X|Z=0]P(Z=0) + E[X|Z=1]P(Z=1) = \mu (1 - p) + (\mu + \phi Z)p \\$
+
+
+$Var[X|Z] = \sigma^2 + \tau^2 Z \\$
+
+$Var[E[X|Z]] = E[(E[X|Z] - E[E[X|Z]])^2] = E[(E[X|Z] - E[X|Z])^2] = E[(0)^2] = 0 \\$
+
+$Var[X] = \sum{Var(X|Z=z)P(Z=z)} + \sum{(E[X|Z=z])^2 (1-P(Z=z))P(Z=z)} \\ = (\sigma^2)(1-p) + (\sigma^2 + \tau^2)(p) + (p)(1-p)(\mu + \mu \phi) \\ = (1-p)(p)(\sigma^2 + \sigma^2 + \tau^2 + \mu + \mu \phi) \\ = (1-p)(p)(2\sigma^2 + \tau^2 + \mu (1 + \phi))$

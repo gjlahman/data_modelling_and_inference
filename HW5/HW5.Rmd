@@ -1,0 +1,198 @@
+---
+title: "Homework 5"
+author: "Gabriel Lahman"
+date: "2/22/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Question 1
+
+```{r}
+N = 10000
+theta = 10
+rate = 1/theta
+exp_pop = rexp(N, rate = rate)
+```
+
+#### Part 1
+
+```{r}
+num_samples = 1000
+sample_size = 200
+sample_1 = rep(0, num_samples)
+for (i in 1:num_samples) {
+  sample_1[i] = mean(sample(exp_pop, sample_size))
+}
+sample_1_mean_dens = density(sample_1)
+plot(sample_1_mean_dens,
+     xlab = "Sample Mean",
+     main = "Density of Sample Means, Resampling Population",
+     type = "h",
+     col = "blue")
+```
+
+#### Part 2
+
+```{r}
+solo_sample = sample(exp_pop, sample_size)
+sample_2 = rep(0, num_samples)
+for (i in 1:num_samples) {
+  sample_2[i] = mean(sample(exp_pop, sample_size, replace = TRUE))
+}
+sample_2_mean_dens = density(sample_2)
+plot(sample_2_mean_dens,
+     xlab = "Sample Mean",
+     main = "Density of Sample Means, Resampling Sample",
+     type = "h")
+```
+
+
+#### Part 3
+
+The densities are incredibly similar. Both appear to be relatively normal, which is expected due to the central limit theorem. The most apparent difference between them is that the density of the samples that used resampling of the population, as opposed to the resampling of one initial sample, looks as if it has more variance. This is explanable because it is resampling from the whole population of 10000 values instead of only an initial sample of 2000.
+
+
+## Question 2
+
+```{r echo=FALSE}
+MLE_fun_gen_gamma = function(y,par_0=c(1,1,1),tol=1e-15,maxit=1e5, hess=FALSE){
+  #par_0 power and shape and expectation
+  par_trans_theta_gen_gamma = function(par){theta = log(par); return(theta)}
+  theta_trans_par_gen_gamma = function(theta){par = exp(theta); return(par)}
+  ll_par_gen_gamma = function(par,y){
+   sum(dgamma(y^(par[1]),shape=par[2],rate=par[2]/(par[3])^par[1],log=TRUE)) +log(par[1])*length(y)+ (par[1]-1)*sum(log(y))
+  }
+  ll_theta_gen_gamma = function(theta,y){
+    par = theta_trans_par_gen_gamma(theta)
+    ll = ll_par_gen_gamma(par,y)
+    return(ll)
+  }
+  theta_0 = par_trans_theta_gen_gamma(par_0)
+  fn_theta = ll_theta_gen_gamma
+  method="Nelder-Mead"
+  control = list(fnscale= -1, maxit=maxit, reltol=tol)
+  opt = optim(par=theta_0,fn=fn_theta,y=y,method=method,control=control)
+  MLE = theta_trans_par_gen_gamma(opt$par)
+  log_lik = opt$value
+  if(!hess){
+    return(list(MLE=MLE, log_lik=log_lik))
+  }else{
+    fn_par = ll_par_gen_gamma
+    hess = optimHess(MLE,fn=fn_par,y=y,control=control)
+    fisher_info = -hess
+    cov = solve(fisher_info)
+    return(list(MLE=MLE, log_lik=log_lik, fisher_info = fisher_info, covariance = cov))
+  }
+}
+
+pred_dens_gen_gamma = function(y_val,mle){
+  par = mle$MLE
+  pred = exp(dgamma(y_val^(par[1]),
+                    shape=par[2],
+                    rate=par[2]/par[3]^par[1],
+                    log=TRUE) +
+               log(par[1])+
+               (par[1]-1)*log(y_val)
+             )
+  return(pred)
+}
+```
+
+```{r}
+data("beavers")
+
+y = beaver1$temp
+
+# Fitting is done using the generalized gamma function from HW3, however
+# I hid the code as it is quite verbose
+
+MLE = MLE_fun_gen_gamma(y)
+
+density_est = density(y)
+density_pred = pred_dens_gen_gamma(density_est$x, MLE)
+plot(density_est,
+     xlab = "Beaver Body Temp.",
+     main = "Beaver Body Temp. Density",
+     lwd = 1.5,
+     type = "h")
+lines(x=density_est$x,
+      y = density_pred,
+      type="h",
+      lwd=1.5,
+      col=rgb(1,0,0,alpha = .5))
+
+legend("topright",
+       c("Estimated Density", "Predicted Density"),
+       fill=c("black",rgb(1,0,0,alpha = .5) ))
+```
+
+
+```{r}
+num_samples = 2000
+sample_size = floor(length(y)/3)
+samples = rep(0, num_samples)
+for (i in 1:num_samples) {
+  samples[i] = mean(sample(y, sample_size))
+}
+
+mean_of_samples = mean(samples)
+alpha = .05
+
+# Naive 
+quants = quantile(samples, c(alpha/2, 1-alpha/2))
+naive_CI = 2*mean_of_samples - quants[2:1]
+names(naive_CI) = c("Lower", "Upper")
+
+# Pivot
+y_bar = mean(y)
+piv_int = (2*y_bar) - naive_CI[2:1]
+names(piv_int) = names(naive_CI)
+
+
+```
+```{r echo=FALSE}
+cat("Naive 95% Confidence Interval\n", "Lower    Upper\n", naive_CI, "\n")
+cat("-----------\nPivot Interval\nLower    Upper\n", piv_int)
+```
+
+
+The intervals are incredibly close. However, I would be more inclined to use the pivot interval. Since a pivot parameter uses weaker assumptions than the naive interval and is effected by any parameters, it gives us a much stronger conclusion. It is generally better to use less assumptions on random data. 
+
+
+## Question 3
+
+```{r}
+data(presidents)
+y = as.vector(presidents)
+y = y[!is.na(y)]
+y = sort(y)
+x = unique(y)
+
+n = length(y)
+nx = length(x)
+counts = rep(0, nx)
+
+val_idx = 1
+for (i in 1:n) {
+  if (y[i] != x[val_idx]) {
+    val_idx = val_idx + 1
+  }
+  counts[val_idx] = counts[val_idx] + 1
+}
+emp_dens = cumsum(counts) * (1/n)
+
+plot(x,
+     emp_dens,
+     type="s",
+     lwd=1.75,
+     xlab = "Approval Rating",
+     ylab = "Cumulative Density",
+     main = "Empirical CDF of Presidential Approval Ratings"
+     )
+```
+
+What I find very interesting about the CDF is that there does not appear to be any plateu like areas. The line is not to far from being linear, which shows that the approval ratings might be close to a uniform or mostly uniform distribution from a lower bound of 23 to and upper bound of 87.
